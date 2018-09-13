@@ -1,4 +1,4 @@
-[<img src="https://noumena.io/wp-content/uploads/2017/01/170113_N_BW-01.png" width="2000"/>](https://noumena.io/ "noumena.io website")
+[<img src="https://noumena.io/wp-content/uploads/2017/01/170113_N_BW-01.png" height="200"/>](https://noumena.io/ "noumena.io website")
 ___
 # PointCloud Data Fusion
 
