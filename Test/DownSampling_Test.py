@@ -1,7 +1,13 @@
+from sys import path
+
+path.append('../')
+
 from src.PyntCloud_Extension.PyntCloud_Extension import PyntCloud_dev as pc
 import pandas as pd
 import os
 import time
+import numpy as np
+
 
 pd.set_option('display.max_columns', 500)
 
@@ -16,9 +22,11 @@ def main(path):
             print(os.path.join(root, file))
 
             cloud = pc.from_file(pc, os.path.join(root, file))
-
+            # print(cloud.points['red'])
+            cloud.points.loc[:, ['red', 'blue', 'green']] /= 256
+            cloud.filter_cloud('red', 'blue')
             print(cloud.points)
-            # print(cloud.points.describe())
+            print(cloud.points.describe())
 
             voxelgrid_id = cloud.add_structure("voxelgrid", size_x=500, size_y=500, size_z=500)
             # print("Voxels added . . .")
@@ -52,4 +60,4 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main("PointClouds/las/")
+    main("../data/PointClouds/las/")

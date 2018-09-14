@@ -37,7 +37,7 @@ pip3 install -r requirements.txt
   [Google-Drive](https://drive.google.com/drive/u/1/folders/1mB3a3tAloiscbtS5fNLrv8phCQs2WYRP)
   _(requires authentication)_ and be added to the project's `data` directory.
 
-- [RGB / Thermal] Image matching: `Test/RGB_Thermal_Match.py`
+- [RGB / Thermal] Image matching: `Test/Reconstruct.py`
 
 - [RGB / Thermal] Fuse data into the Point-Cloud: `Test/Data_Fusion.py`
 

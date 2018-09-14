@@ -74,3 +74,6 @@ class PyntCloud_dev(pyntcloud.PyntCloud):
 
         else:
             return pyntcloud.PyntCloud.from_file(filename, **kwargs)
+
+    def filter_cloud(self, filter_channel, error_channel):
+        self.points[filter_channel] *= (self.points[error_channel].astype('float64') / 255) ** -1
