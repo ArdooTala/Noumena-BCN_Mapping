@@ -15,7 +15,8 @@ def static_vars(**kwargs):
 
 @static_vars(counter=0)
 def mi(path):
-    print("====ID: {:04}================================".format(mi.counter))
+    print("\n====TaskID: {:04}============================================"
+          .format(mi.counter))
     mi.counter += 1
     return ImageUtils(path)
 
@@ -25,14 +26,14 @@ def main(rgbs_path, thermals_path):
 
     for root, subs, files in os.walk(rgbs_path):
         paths = [(root, file) for file in files if file.endswith('.JPG')]
-        print("CPU cores available: %d" % cpu_count())
+        print(">>> CPU cores available: %d" % cpu_count())
 
-        with Pool(cpu_count()) as pool:
-            print("~~~~ Into the pool ~~~~~~~~~~~~~~~~~~~~~~~~")
-            imgLst = pool.map(mi, paths[:50])
-            print("And OUT!")
+        # with Pool(cpu_count()) as pool:
+        #     print("~~~~ Into the pool ~~~~~~~~~~~~~~~~~~~~~~~~")
+        #     imgLst = pool.map(mi, paths[:10])
+        #     print("And OUT!")
 
-        # imgLst = map(mi, paths[:10])
+        imgLst = map(mi, paths[:10])
 
         imgs = {imgUtl.file: imgUtl for imgUtl in imgLst}
 
@@ -43,9 +44,11 @@ def main(rgbs_path, thermals_path):
                 continue
             cv2.imshow(win, i.collage)
             cv2.waitKey()
-    ## PAUSE!
-    return
+    return imgs
 
+
+# ## Inputs to be set later: This was peice of main originally!
+def recreate_sparse(images):
     cameras, images, points3D = \
         read_model(path='/Users/Ardoo/Desktop/COLMAP_Test/Exports/TXT0/',
                    ext=".txt")
@@ -109,7 +112,8 @@ def main(rgbs_path, thermals_path):
 
 
 if __name__ == '__main__':
-    trm_path = "/Users/ardoo/Desktop/PT_Cloud_From_Images/PycharmProjects/PointCloud_Data_Fusion/Images/Sample/Thermal"
-    rgb_path = "/Users/ardoo/Desktop/Dense_Reconstruction/images/JPG"
+    rgb_path = "/Volumes/Storage/COLMAP_Test/RGB_Big/GUI_Project/Dense/images/"
+    trm_path = "/Volumes/Storage/COLMAP_Test/FLIR/"
 
-    main(rgb_path, trm_path)
+    images = main(rgb_path, trm_path)
+    # recreate_sparse(images)

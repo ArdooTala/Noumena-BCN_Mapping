@@ -8,61 +8,44 @@ import cv2
 
 
 class ImageUtils:
+    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(15, 15))  # create a CLAHE object (Arguments are optional).
     thermalDateTimes = {}
-    # create a CLAHE object (Arguments are optional).
-    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(15, 15))
 
     def __init__(self, path):
-        print(">>> INITIATING CLASS: %s" % path[1])
-        print("============================================")
+        print(">>> INITIATING IMAGE: {}".format(path[1]))
         self.root = path[0]
         self.file = path[1]
         self.dateTime = self.extractDateTime(self.file)
-        print("\t\tDate/Time extracted . . .")
+        print(">\t[-] Date/Time extracted.")
         self.closestImage = self.matchThermal()
         if self.closestImage:
-            (self.minY, self.minX), (self.maxY, self.maxX), self.collage = \
+            (self.minY, self.minX), (self.maxY, self.maxX), self.collage, self.filter = \
                 self.matchImages()
-            print("\t\tThermal Matched.")
+            # print("\t[-] Thermal Matching Done.")
         else:
             # self.collage = None
-            print("\t\tThermal NOT Matched.")
+            print(">\t[*] Thermal NOT Matched.")
+        print("=" * 60)
 
     @classmethod
     def importThermalImages(cls, tif_image_path):
-        print("Importing thermal Images . . .")
+        print(">>> Importing thermal Images . . .")
         for root, subs, files in os.walk(tif_image_path):
             for file in files:
                 if not file.endswith('.tiff'):
-                    print("{} is not a valid name.".format(file))
+                    print("\t\t[*] {} is not a valid name.".format(file))
                     continue
                 cls.thermalDateTimes[(root, file)] = \
                     cls.extractDateTime(file)
 
     @staticmethod
-    def show(*args, terminate=False):
+    def show(*args, terminate=False, time=0):
         cv2.namedWindow('image', cv2.WINDOW_NORMAL)
         chnls = np.concatenate([arg for arg in args], axis=1)
         cv2.imshow('image', chnls)
-        cv2.waitKey()
+        cv2.waitKey(time)
         if terminate:
             cv2.destroyAllWindows()
-
-    def matchThermal(self):
-        closest_image = sorted(
-            list(self.thermalDateTimes.keys())[:],
-            key=lambda x: abs(self.dateTime
-                              - self.thermalDateTimes[x])
-        )[0]
-
-        time_span = abs(self.dateTime - self.thermalDateTimes[closest_image])
-
-        if time_span < timedelta(seconds=2):
-            print("\nRGB image: {}\nThermal image: {}\n\tTime span: {}"
-                  .format(self.file, closest_image[1], time_span))
-            return closest_image, time_span
-        else:
-            print("\tNo Match Found!")
 
     @staticmethod
     def extractDateTime(file):
@@ -72,24 +55,11 @@ class ImageUtils:
                 file.split('.')[0][:-8], 'IMG_%y%m%d_%H%M%S_'
             )
             return image_date_time + sync_time
-
         except ValueError:
             return datetime.strptime(file.split('.')[0], '%Y%m%d_%H%M%S')
-
         except ValueError:
-            print("{}[thermal] is not a date/time format, is it?".format(file))
+            print(">\t\t[*] {} is not a date/time format, is it?".format(file))
             return
-
-    # def copyXMP(self, target_file):
-    #     xmp_file_original = XMPFiles(file_path=self.file, open_forupdate=True)
-    #     xmp_original = xmp_file_original.get_xmp()
-    #
-    #     xmp_crop_file = XMPFiles(file_path=target_file, open_forupdate=True)
-    #     assert xmp_crop_file.can_put_xmp(xmp_original), "Houston, we have a problem!"
-    #
-    #     xmp_crop_file.put_xmp(xmp_original)
-    #     xmp_crop_file.close_file()
-    #     print("\tXMP Updated!")
 
     @staticmethod
     def mixChannels(tif_image_path):
@@ -101,7 +71,6 @@ class ImageUtils:
                         if "GRE" in file:
                             gre = cv2.imread(os.path.join(_root, file), 0)
                             gre = gre.reshape(gre.shape[0], gre.shape[1], 1)
-                            print(gre.shape)
 
                         if "NIR" in file:
                             nir = cv2.imread(os.path.join(_root, file), 0)
@@ -116,12 +85,39 @@ class ImageUtils:
                     cv2.imshow("mix", mix)
                     cv2.waitKey()
 
+    def matchThermal(self):
+        closest_image = sorted(
+            list(self.thermalDateTimes.keys())[:],
+            key=lambda x: abs(self.dateTime
+                              - self.thermalDateTimes[x])
+        )[0]
+
+        time_span = abs(self.dateTime - self.thermalDateTimes[closest_image])
+
+        if time_span < timedelta(seconds=2):
+            print(">\t\tRGB image: {}\n>\t\tThermal image: {}\n>\t[-] Time span: {}"
+                  .format(self.file, closest_image[1], time_span))
+            return closest_image, time_span
+        else:
+            print(">\t[*] No Match Found!")
+
+    # def copyXMP(self, target_file):
+    #     xmp_file_original = XMPFiles(file_path=self.file, open_forupdate=True)
+    #     xmp_original = xmp_file_original.get_xmp()
+    #
+    #     xmp_crop_file = XMPFiles(file_path=target_file, open_forupdate=True)
+    #     assert xmp_crop_file.can_put_xmp(xmp_original), "Houston, we have a problem!"
+    #
+    #     xmp_crop_file.put_xmp(xmp_original)
+    #     xmp_crop_file.close_file()
+    #     print("\tXMP Updated!")
+
     def matchImages(self):
-        #### RGB pre-processing
-        rgb_image = cv2.imread(os.path.join(self.root, self.file), 0)
-        rgb_image_main = imutils.rotate_bound(rgb_image, 180)
-        offset_0 = int(rgb_image_main.shape[0] / 5)
-        offset_1 = int(rgb_image_main.shape[1] / 5)
+        # ## RGB pre-processing
+        rgb_image = cv2.imread(os.path.join(self.root, self.file), 1)
+        rgb_image_main = imutils.rotate_bound(rgb_image, 0)
+        offset_0 = int(rgb_image_main.shape[0] / 10)
+        offset_1 = int(rgb_image_main.shape[1] / 10)
         rgb_image = rgb_image_main[offset_0:rgb_image_main.shape[0] - offset_0,
                     offset_1:rgb_image_main.shape[1] - offset_1,
                     :]
@@ -145,66 +141,50 @@ class ImageUtils:
         # rgb_edges = cv2.erode(rgb_edges, np.ones((3, 3)), iterations=3)
 
         # rgb_edges = cv2.resize(rgb_edges, None, fx=.2, fy=.2)
-        rgb_edges = cv2.blur(rgb_edges, (5, 5))
+        rgb_edges = cv2.blur(rgb_edges, (3, 3))
 
-        #### Template pre-processing
+        # ## Template pre-processing
         template = cv2.imread(os.path.join(self.closestImage[0][0],
                                            self.closestImage[0][1]),
                               -1).astype('uint8')
         template = imutils.rotate_bound(template, 180)
         template = cv2.resize(template, (1728, 1217), interpolation=cv2.INTER_CUBIC)
-        # equ_template = cv2.equalizeHist(template)
         blur_template = cv2.GaussianBlur(template, (7, 7), 7)
         equ_template = self.__class__.clahe.apply(blur_template)
-        # cv2.imwrite("/Users/ardoo/Desktop/Thermals_Normalized/" + self.closestImage[0][1], equ_template)
         template_edges = cv2.Canny(equ_template, 30, 50)
 
         # template_edges = cv2.dilate(template_edges, np.ones((3, 3)), iterations=3)
         # template_edges = cv2.erode(template_edges, np.ones((3, 3)), iterations=3)
 
         # template_edges = cv2.resize(template_edges, None, fx=.2, fy=.2)
-        template_edges = cv2.blur(template_edges, (5, 5))
-
-        # self.show(rgb_image)
-        # self.show(template)
-        #
-        # self.show(cv2.resize(rgb_edges, (1024, 768)))
-        # self.show(cv2.resize(template_edges, (768, 480)))
+        template_edges = cv2.blur(template_edges, (3, 3))
 
         h, w = template.shape
 
         methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
                    'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
-        method = eval(methods[0])
+        method = eval(methods[1])
         res = cv2.matchTemplate(rgb_edges, template_edges, method)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         top_left = max_loc  # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
 
         top_left = (top_left[0] + offset_1, top_left[1] + offset_0)
-
-        # top_left = [i*5 for i in top_left]
         bottom_right = (top_left[0] + w, top_left[1] + h)
 
-        print("Thermal {1} placed @ {0}: {2}"
-              .format(self.file, self.closestImage[0][1], top_left))
+        print(">\t[-] Thermal placed @ {} of the RGB"
+              .format(top_left))
 
-        # overlap = np.zeros((rgb_edges.shape[0], rgb_edges.shape[1], 3))
-        # overlap[:, :, 0] = rgb_edges
-        # overlap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0], 2] = template_edges
-        # show(overlap)
+        overlap = np.zeros((rgb_image_main.shape[0], rgb_image_main.shape[1], 3)).astype(np.uint8)
+        cv2.rectangle(overlap, top_left, bottom_right, color=(0, 0, 255), thickness=-1)
+        overlap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0], 1] = template
+        # self.show(overlap, time=2)
 
-        # collage = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
         collage = cv2.cvtColor(rgb_image_main, cv2.COLOR_BGR2GRAY)
         collage[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = template
-        # self.collage = collage
 
-        ## Temp . . .
-        # cv2.rectangle(collage, top_left, bottom_right, 0, thickness=10)
-        # (self.minY, self.minX), (self.maxY, self.maxX) = \
-        #     top_left, bottom_right
-        return top_left, bottom_right, collage
+        return top_left, bottom_right, collage, overlap
 
 
 if __name__ == '__main__':
-    rgb_path = "PycharmProjects/PointCloud_Data_Fusion/Images/PT_05/JPG"
-    thermal_path = "PycharmProjects/PointCloud_Data_Fusion/Images/PT_05/THERMAL"
+    rgb_path = "/Volumes/Storage/COLMAP_Test/RGB_Big/GUI_Project/Dense/images/"
+    thermal_path = "/Volumes/Storage/COLMAP_Test/FLIR/"
