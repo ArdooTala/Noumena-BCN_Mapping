@@ -8,7 +8,8 @@ import cv2
 
 
 class ImageUtils:
-    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(15, 15))  # create a CLAHE object (Arguments are optional).
+    # clahe = cv2.createCLAHE(clipLimit=5, tileGridSize=(3, 3))       # PT_5
+    clahe = cv2.createCLAHE(clipLimit=2, tileGridSize=(15, 15))  # PT_6
     thermalDateTimes = {}
 
     def __init__(self, path):
@@ -18,13 +19,8 @@ class ImageUtils:
         self.dateTime = self.extractDateTime(self.file)
         print(">\t[-] Date/Time extracted.")
         self.closestImage = self.matchThermal()
-        if self.closestImage:
-            (self.minY, self.minX), (self.maxY, self.maxX), self.collage, self.filter = \
-                self.matchImages()
-            # print("\t[-] Thermal Matching Done.")
-        else:
-            # self.collage = None
-            print(">\t[*] Thermal NOT Matched.")
+        (self.minY, self.minX), (self.maxY, self.maxX), self.collage, self.filter = \
+            self.matchImages()
         print("=" * 60)
 
     @classmethod
@@ -37,6 +33,8 @@ class ImageUtils:
                     continue
                 cls.thermalDateTimes[(root, file)] = \
                     cls.extractDateTime(file)
+        if len(cls.thermalDateTimes) < 1:
+            raise Exception('Thermal Images not found! Please check the directory.')
 
     @staticmethod
     def show(*args, terminate=False, time=0):
@@ -49,7 +47,8 @@ class ImageUtils:
 
     @staticmethod
     def extractDateTime(file):
-        sync_time = timedelta(hours=1, minutes=59, seconds=26)
+        # sync_time = timedelta(hours=1, minutes=59, seconds=26)  # For PT_5.
+        sync_time = timedelta(hours=1, minutes=59, seconds=10)  # For PT_6.
         try:
             image_date_time = datetime.strptime(
                 file.split('.')[0][:-8], 'IMG_%y%m%d_%H%M%S_'
@@ -115,9 +114,21 @@ class ImageUtils:
     def matchImages(self):
         # ## RGB pre-processing
         rgb_image = cv2.imread(os.path.join(self.root, self.file), 1)
+
+        if not self.closestImage:
+            print(">\t[*] No Thermal to Match.")
+            collage = np.zeros(rgb_image.shape)
+            overlap = np.zeros(rgb_image.shape)
+            return (None, None), (None, None), collage, overlap
+
         rgb_image_main = imutils.rotate_bound(rgb_image, 0)
-        offset_0 = int(rgb_image_main.shape[0] / 10)
-        offset_1 = int(rgb_image_main.shape[1] / 10)
+
+        offset_0 = int(rgb_image_main.shape[0] / 10)  # PT_6
+        offset_1 = int(rgb_image_main.shape[1] / 10)  # PT_6
+
+        # offset_0 = int(rgb_image_main.shape[0] / 5)    # PT_5
+        # offset_1 = int(rgb_image_main.shape[1] / 5)    # PT_5
+
         rgb_image = rgb_image_main[offset_0:rgb_image_main.shape[0] - offset_0,
                     offset_1:rgb_image_main.shape[1] - offset_1,
                     :]
@@ -141,7 +152,7 @@ class ImageUtils:
         # rgb_edges = cv2.erode(rgb_edges, np.ones((3, 3)), iterations=3)
 
         # rgb_edges = cv2.resize(rgb_edges, None, fx=.2, fy=.2)
-        rgb_edges = cv2.blur(rgb_edges, (3, 3))
+        rgb_edges = cv2.blur(rgb_edges, (5, 5))  # PT_6
 
         # ## Template pre-processing
         template = cv2.imread(os.path.join(self.closestImage[0][0],
@@ -157,13 +168,14 @@ class ImageUtils:
         # template_edges = cv2.erode(template_edges, np.ones((3, 3)), iterations=3)
 
         # template_edges = cv2.resize(template_edges, None, fx=.2, fy=.2)
-        template_edges = cv2.blur(template_edges, (3, 3))
+        template_edges = cv2.blur(template_edges, (5, 5))  # PT_6
 
         h, w = template.shape
 
         methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
                    'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
-        method = eval(methods[1])
+        # method = eval(methods[1])  # PT_5
+        method = eval(methods[1])  # PT_6
         res = cv2.matchTemplate(rgb_edges, template_edges, method)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         top_left = max_loc  # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
@@ -180,7 +192,8 @@ class ImageUtils:
         # self.show(overlap, time=2)
 
         collage = cv2.cvtColor(rgb_image_main, cv2.COLOR_BGR2GRAY)
-        collage[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = template
+        collage[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] = equ_template
+        self.show(collage, time=2)
 
         return top_left, bottom_right, collage, overlap
 

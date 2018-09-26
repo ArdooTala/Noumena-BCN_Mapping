@@ -1,5 +1,4 @@
 from sys import path
-
 path.append('../')
 
 from src.PyntCloud_Extension.PyntCloud_Extension import PyntCloud_dev as pc
@@ -12,30 +11,29 @@ import numpy as np
 pd.set_option('display.max_columns', 500)
 
 
-def main(path):
+def main(path, save_path):
     for root, subs, files in os.walk(path):
+        print(root, subs, files)
         for file in files:
             t0 = time.time()
-            if not file.endswith(".las"):
+            if not file.endswith(".ply"):
                 continue
             print("_" * 50)
             print(os.path.join(root, file))
 
-            cloud = pc.from_file(pc, os.path.join(root, file))
-            # print(cloud.points['red'])
-            cloud.points.loc[:, ['red', 'blue', 'green']] /= 256
-            cloud.filter_cloud('red', 'blue')
-            print(cloud.points)
-            print(cloud.points.describe())
+            cloud = pc.from_file(os.path.join(root, file))
 
-            voxelgrid_id = cloud.add_structure("voxelgrid", size_x=500, size_y=500, size_z=500)
+            print(cloud.points['red'][cloud.points['red'] > 0])
+            cloud.filter_cloud('green', 'red')
+            print(cloud.points['green'][cloud.points['green'] > 255])
+
+            voxelgrid_id = cloud.add_structure("voxelgrid", n_x=100, n_y=100, n_z=100)
             # print("Voxels added . . .")
             new_cloud = cloud.get_sample("voxelgrid_mean_centers",
                                          voxelgrid_id=voxelgrid_id,
                                          as_PyntCloud=False)
-            # print(new_cloud)
             print("Saving . . .")
-            new_cloud.to_csv("PointClouds/Exports/" + file[:-4] + "_Norm.csv")
+            # new_cloud.to_csv(save_path + file[:-4] + "_Norm.csv")
             print("Done in {:.1f} seconds!\n".format(time.time() - t0))
             print("_" * 50)
 
@@ -60,4 +58,5 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main("../data/PointClouds/las/")
+    main("/Users/Ardoo/Desktop/PointCloud_Data_Fusion/data/PointClouds/COLMAP/",
+         "/Users/Ardoo/Desktop/PointCloud_Data_Fusion/data/PointClouds/Exports/")

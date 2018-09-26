@@ -43,37 +43,37 @@ class PyntCloud_dev(pyntcloud.PyntCloud):
         else:
             return pyntcloud.PyntCloud.get_sample(self, name, as_PyntCloud, **kwargs)
 
-    def from_file(cls, filename, **kwargs):
-        ext = filename.split(".")[-1].upper()
-
-        if ext.upper() == "LAS":
-            """Read a .las/laz file and store elements in pandas DataFrame.
-
-                Parameters
-                ----------
-                filename: str
-                    Path to the filename
-                Returns
-                -------
-                data: dict
-                    Elements as pandas DataFrames.
-                """
-            print("Overwriting the .LAS reading method . . .")
-            if laspy is None:
-                raise ImportError("laspy is needed for reading .las files.")
-            data = {}
-
-            with laspy.file.File(filename, mode='rw') as las:
-                data["points"] = pd.DataFrame(las.points["point"])
-                data["points"].columns = (x.lower() for x in data["points"].columns)
-                # because laspy do something strange with scale
-                data["points"].loc[:, ["x", "y", "z"]] *= las.header.scale
-                data["las_header"] = las.header
-
-            return cls(**data)
-
-        else:
-            return pyntcloud.PyntCloud.from_file(filename, **kwargs)
+    # def from_file(cls, filename, **kwargs):
+    #     ext = filename.split(".")[-1].upper()
+    #
+    #     if ext.upper() == "LAS":
+    #         """Read a .las/laz file and store elements in pandas DataFrame.
+    #
+    #             Parameters
+    #             ----------
+    #             filename: str
+    #                 Path to the filename
+    #             Returns
+    #             -------
+    #             data: dict
+    #                 Elements as pandas DataFrames.
+    #             """
+    #         print("Overwriting the .LAS reading method . . .")
+    #         if laspy is None:
+    #             raise ImportError("laspy is needed for reading .las files.")
+    #         data = {}
+    #
+    #         with laspy.file.File(filename, mode='rw') as las:
+    #             data["points"] = pd.DataFrame(las.points["point"])
+    #             data["points"].columns = (x.lower() for x in data["points"].columns)
+    #             # because laspy do something strange with scale
+    #             data["points"].loc[:, ["x", "y", "z"]] *= las.header.scale
+    #             data["las_header"] = las.header
+    #
+    #         return cls(**data)
+    #
+    #     else:
+    #         return pyntcloud.PyntCloud.from_file(filename, **kwargs)
 
     def filter_cloud(self, filter_channel, error_channel):
-        self.points[filter_channel] *= (self.points[error_channel].astype('float64') / 255) ** -1
+        self.points[filter_channel] *= 255.00 / (self.points[error_channel].astype('float64'))
